@@ -72,7 +72,27 @@ class Trainer(abc.ABC):
             # - Optional: Implement early stopping. This is a very useful and
             #   simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            TrainEpochResult = self.train_epoch(dl_train)
+            train_acc.append(TrainEpochResult[1]) ;
+            total_Train_loss= torch.stack(TrainEpochResult[0], dim=0).sum(dim=0).sum(dim=0)/len(dl_train.batch_sampler)
+            train_loss.append(total_Train_loss.item())
+
+
+            TestEpochResult = self.test_epoch(dl_test)
+            test_acc.append(TestEpochResult[1]) ;
+            total_Test_loss = torch.stack(TestEpochResult[0], dim=0).sum(dim=0).sum(dim=0)/len(dl_test.batch_sampler)
+            test_loss.append(total_Test_loss.item())
+
+            if early_stopping is not None and len(train_loss) >= early_stopping:
+                x_diff = []
+                relevant_loss = train_loss[-early_stopping:]
+                for i in range(len(relevant_loss)-1):
+                    x_diff.append(relevant_loss[i+1]-relevant_loss[i])
+                if abs(sum(x_diff)/len(x_diff)) <= 0.01:
+                    break
+
+
+
             # ========================
 
         return FitResult(actual_num_epochs,
@@ -139,8 +159,8 @@ class Trainer(abc.ABC):
         """
         losses = []
         num_correct = 0
-        num_samples = len(dl.sampler)
-        num_batches = len(dl.batch_sampler)
+        num_samples = len(dl.sampler) ;
+        num_batches = len(dl.batch_sampler) ;
 
         if max_batches is not None:
             if max_batches < num_batches:
@@ -188,7 +208,19 @@ class BlocksTrainer(Trainer):
         # - Optimize params
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # forward pass
+        x_scores = self.model(x=X)
+
+        #BackProp
+        self.optimizer.zero_grad()
+        loss = self.loss_fn(x_scores,y)
+        self.model.backward(self.loss_fn.backward())
+        self.optimizer.step()
+
+        _, predicted = torch.max(x_scores.data, 1)
+        num_correct = (predicted == y).sum().item()
+
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -200,7 +232,11 @@ class BlocksTrainer(Trainer):
         # - Forward pass
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        xscore = self.model.forward(x=X)
+        loss = self.loss_fn(xscore,y)
+
+        _, predicted = torch.max(xscore.data, 1)
+        num_correct = (predicted == y).sum().item()
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -222,8 +258,22 @@ class TorchTrainer(Trainer):
         # - Optimize params
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
+        #Clear Grad
+        self.optimizer.zero_grad()
+
+        #Forward Pass
+        x_scores = self.model(X)
+
+        #Compute Loss
+        loss = self.loss_fn(x_scores,y)
+        #Backward Pass
+        loss.backward()
+
+        #Weight Update
+        self.optimizer.step()
+
+        _, predicted = torch.max(x_scores.data, 1)
+        num_correct = (predicted == y).sum().item()
 
         return BatchResult(loss, num_correct)
 
@@ -238,7 +288,17 @@ class TorchTrainer(Trainer):
             # - Forward pass
             # - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            self.optimizer.zero_grad()
+
+            # Forward Pass
+            x_scores = self.model(X)
+
+            # Compute Loss
+            loss = self.loss_fn(x_scores, y)
+
+            _, predicted = torch.max(x_scores.data, 1)
+            num_correct = (predicted == y).sum().item()
+
             # ========================
 
         return BatchResult(loss, num_correct)

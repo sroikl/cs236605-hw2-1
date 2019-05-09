@@ -66,12 +66,12 @@ class VanillaSGD(Optimizer):
         for p, dp in self.params:
             if dp is None:
                 continue
-
             # TODO: Implement the optimizer step.
             # Update the gradient according to regularization and then
             # update the parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            dp += self.reg*p
+            p -= self.learn_rate*dp
             # ========================
 
 
@@ -90,21 +90,21 @@ class MomentumSGD(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.velocity = {p: torch.zeros_like(dp) for p,dp in params if dp is not None}
         # ========================
 
     def step(self):
         for p, dp in self.params:
             if dp is None:
                 continue
-
             # TODO: Implement the optimizer step.
             # update the parameters tensor based on the velocity. Don't forget
             # to include the regularization term.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            dp += self.reg * p
+            self.velocity[p] = self.velocity[p]*self.momentum - dp*self.learn_rate
+            p += self.velocity[p]
             # ========================
-
 
 class RMSProp(Optimizer):
     def __init__(self, params, learn_rate=1e-3, reg=0, decay=0.99, eps=1e-8):
@@ -123,7 +123,7 @@ class RMSProp(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.gamma = {p: torch.zeros_like(dp) for p,dp in params if dp is not None}
         # ========================
 
     def step(self):
@@ -136,5 +136,7 @@ class RMSProp(Optimizer):
             # average of it's previous gradients. Use it to update the
             # parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            dp += self.reg*p
+            self.gamma[p] = self.decay*self.gamma[p] + (1.-self.decay)*(dp.pow(2))
+            p -= self.learn_rate*dp/torch.sqrt(self.gamma[p]+self.eps)
             # ========================

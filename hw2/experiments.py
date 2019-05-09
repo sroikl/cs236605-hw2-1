@@ -15,7 +15,10 @@ from cs236605.train_results import FitResult
 from . import models
 from . import training
 
-DATA_DIR = os.path.join(os.getenv('HOME'), '.pytorch-datasets')
+
+# DATA_DIR = os.path.join(os.getenv('HOME'), '.pytorch-datasets')
+DATA_DIR = os.path.expanduser('~/.pytorch-datasets')
+
 
 
 def run_experiment(run_name, out_dir='./results', seed=None,
@@ -56,9 +59,26 @@ def run_experiment(run_name, out_dir='./results', seed=None,
     #  for you automatically.
     fit_res = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
-    # ========================
+    x0,_ = ds_train[0]
+    in_size = x0.shape ; out_calss = 10
 
+    #Create DataLoader
+    dl_train = torch.utils.data.DataLoader(ds_train, bs_train, shuffle=False)
+    dl_test = torch.utils.data.DataLoader(ds_test, bs_test, shuffle=False)
+
+
+    #Create Model
+    Exp_model = models.ConvClassifier(in_size,out_calss,filters=filters_per_layer,pool_every=pool_every,hidden_dims=hidden_dims)
+    loss_fn = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(Exp_model.parameters(),lr=lr,momentum= 0.9)
+
+    #Create Trainer instance
+
+    trainer = training.TorchTrainer(Exp_model,loss_fn,optimizer,device)
+    #Training Loop
+    fit_res = trainer.fit(dl_train=dl_train,dl_test=dl_test,num_epochs=epochs)
+
+    # ========================
     save_experiment(run_name, out_dir, cfg, fit_res)
 
 
@@ -88,7 +108,6 @@ def load_experiment(filename):
 def parse_cli():
     p = argparse.ArgumentParser(description='CS236605 HW2 Experiments')
     sp = p.add_subparsers(help='Sub-commands')
-
     # Experiment config
     sp_exp = sp.add_parser('run-exp', help='Run experiment with a single '
                                            'configuration')

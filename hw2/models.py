@@ -33,7 +33,15 @@ class MLP(Block):
 
         # TODO: Build the MLP architecture as described.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        in_dims = [in_features] + hidden_features[:-1]
+        out_dims = hidden_features
+        for in_dim,out_dim in zip(in_dims,out_dims):
+            blocks.append(Linear(in_dim,out_dim))
+            if activation == 'relu':
+                blocks.append(ReLU())
+            elif activation == 'sigmoid':
+                blocks.append(Sigmoid())
+        blocks.append(Linear(out_dim,num_classes))
         # ========================
 
         self.sequence = Sequential(*blocks)
@@ -84,28 +92,47 @@ class ConvClassifier(nn.Module):
     def _make_feature_extractor(self):
         in_channels, in_h, in_w, = tuple(self.in_size)
 
+        N = len(self.filters) ; P = self.pool_every
+
         layers = []
         # TODO: Create the feature extractor part of the model:
         # [(Conv -> ReLU)*P -> MaxPool]*(N/P)
         # Use only dimension-preserving 3x3 convolutions. Apply 2x2 Max
         # Pooling to reduce dimensions.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
-
+        '''Adding Convolution Layers '''
+        for i in range(N):
+            layers.append(nn.Conv2d(in_channels,self.filters[i],3,padding=1))
+            layers.append(nn.ReLU())
+            if i%P == 1 :
+                layers.append(nn.MaxPool2d(2))
+            in_channels = self.filters[i]
         # ========================
         seq = nn.Sequential(*layers)
         return seq
 
     def _make_classifier(self):
         in_channels, in_h, in_w, = tuple(self.in_size)
-
+        N = len(self.filters) ; P = self.pool_every
+        M = len(self.hidden_dims)
         layers = []
         # TODO: Create the classifier part of the model:
         # (Linear -> ReLU)*M -> Linear
         # You'll need to calculate the number of features first.
         # The last Linear layer should have an output dimension of out_classes.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        '''Calculate Dimensions Robustly'''
+        for i in range(N):
+            if i%P == 1:
+                in_w /= 2
+                in_h /= 2
+        in_dims = self.filters[-1] * int(in_h * in_w)
+
+        for i in range(M):
+            layers.append(nn.Linear(in_dims, self.hidden_dims[i]))
+            layers.append(nn.ReLU())
+            in_dims = self.hidden_dims[i]
+        layers.append(nn.Linear(in_dims, self.out_classes))
         # ========================
         seq = nn.Sequential(*layers)
         return seq
@@ -115,7 +142,10 @@ class ConvClassifier(nn.Module):
         # Extract features from the input, run the classifier on them and
         # return class scores.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        features = self.feature_extractor(x)
+        features = features.view(features.size(0), -1)
+        out = self.classifier(features)
+        # raise NotImplementedError()
         # ========================
         return out
 
@@ -129,6 +159,6 @@ class YourCodeNet(ConvClassifier):
     # For example, add batchnorm, dropout, skip connections, change conv
     # filter sizes etc.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
 
